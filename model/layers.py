@@ -227,13 +227,13 @@ class Predictor(nn.Module):
                 nn.ReLU(),
                 nn.MaxPool2d(2, 2),
                 Reshape(16 * 16 * 32),
-                nn.Linear(16 * 16 * 32, 256),
+                nn.Linear(16 * 16 * 32, 128),
                 nn.ReLU(),
             ) # [128, 128, 3] -> [16, 16, 32]
-            self.TSconv1 = TGCNConv(256, hidden_dim, tau=tau)
+            self.TSconv1 = TGCNConv(128, hidden_dim, tau=tau)
             self.TSconv2 = TGCNConv(hidden_dim, class_dim, tau=tau)
 
-            self.GCNconv1 = GCNConv(256, hidden_dim)
+            self.GCNconv1 = GCNConv(128, hidden_dim)
             self.GCNconv2 = GCNConv(hidden_dim, class_dim)
         else:
             self.TSconv1 = TGCNConv(input_dim, hidden_dim, tau=tau)
@@ -283,7 +283,7 @@ class Predictor(nn.Module):
             # hidden = torch.cat((hidden, (self.beta * hidden_g).unsqueeze(0)), dim=0)
 
         if self.if_forec:
-            return F.softmax(hidden, dim=1).squeeze(2) # [batch_size, num_nodes, class_dim]
+            return hidden.squeeze(2) # [batch_size, num_nodes, class_dim]
         else:   
             return F.softmax(hidden.sum(dim=1, keepdim=False), dim=1) # [batch_size, class_dim]
 

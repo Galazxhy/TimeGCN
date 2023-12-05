@@ -60,7 +60,7 @@ def run(args):
             net.to(args.device)
             # optimizer
             SLopt = optim.Adam(net.sslParam, lr=args.SLlr, weight_decay=1e-5)
-            PREopt = optim.Adam(net.predParam, lr=args.PRElr, weight_decay=1e-4)
+            PREopt = optim.Adam(net.predParam, lr=args.PRElr, weight_decay=1e-5)
             # train
             if args.forec:
                 print('--------Training Forecasting Task--------')

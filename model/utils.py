@@ -18,15 +18,18 @@ import os
 import numpy as np
 import torch
 
-def print_log(args, results):
+def print_log(i, args, results):
     """Print Training Config and Results
     ---
     Parameters:
         args: Training config
         results: Training results
     """
+
     f = open('./log/log' + args.model + '.txt', 'a')
+    f.write(f"Trained EXP{i}:\n")
     f.write('Input Parameters:\n')
+    
     for k, v in vars(args).items():
         f.write('\t'+str(k)+'='+str(v)+'\n')
     f.write('\n')

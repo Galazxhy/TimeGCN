@@ -32,14 +32,15 @@ def valid(model, validDataloader, args):
     with torch.no_grad():
         for data in validDataloader:
             # data: (x: [batch_size, seq_length, num_feature], ySL: [batch_size, seq_length, num_class]) y:[batch_size, num_class]
-            x, ySL, y = data
+            x, ySL, mask, y = data
             x = x.to(args.device)
             ySL = ySL.to(args.device)
+            mask = mask.to(args.device)
             y = y.to(args.device)
             if args.forec:
                 if args.model == 'DSSL':
                     output = model.predictor(x) # [batch_size, seq_length, 1]
-                    accuracy += F.r2_score(output[ySL[:, 1] == 1], ySL[:, 0][ySL[:, 1] == 1])
+                    accuracy += F.r2_score(torch.masked_select(output, mask), torch.masked_select(ySL, mask))
                 else:
                     output = model(x) # [batch_size, 1]
                     accuracy += F.r2_score(output)

@@ -42,7 +42,7 @@ def strcutureLearning(model, opt, TSdataloader, args, writer):
         for data in TSdataloader:
             # data: (x: [batch_size, num_feature])
             # t1 = time.time()
-            x, _, _ = data
+            x, _, _, _ = data
             x = x.to(args.device)
             
             opt.zero_grad()
@@ -85,20 +85,21 @@ def perdictorLearning(model, opt, TSdataloader, valid_dataloader, args, writer):
     
         for data in TSdataloader:
             # data: (x: [batch_size, num_feature], ySL: [batch_size, 2, seq_length, num_class])
-            x, ySL, y = data
+            x, ySL, mask, y  = data
             x = x.to(args.device)
             ySL = ySL.to(args.device)
+            mask = mask.to(args.device)
             y = y.to(args.device)
             if args.forec:
                 # Forcasting task
                 opt.zero_grad()
                 if args.model == 'DSSL':
                     output = model.predictor(x) # [batch_size, seq_length, num_class
-                    loss = F.mse_loss(output[ySL[:, 1] == 1], ySL[:, 0][ySL[:, 1] == 1])
+                    loss = F.mse_loss(torch.masked_select(output, mask), torch.masked_select(ySL, mask))
                 else:
                     output = model(x) # [batch_size, num_class]
                     loss = F.mse_loss(output, y)
-                loss.backward()
+                loss.backward(retain_graph=True)
                 opt.step()
                 total_loss += loss.item()
             else:

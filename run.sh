@@ -22,11 +22,11 @@ PRElr=1e-5
 class_dim=1
 
 # Time-series gragh predictor learning parameters
-TGPhidden_dim=256
+TGPhidden_dim=32
 TGPepoch=500
-TGPbeta=1e-4
-TGPtau=30
-TGPfc=0.05
+TGPbeta=1e-3
+TGPtau=8
+TGPfc=0.01
 
 # LSTM predictor learning parameters
 LSTMhidden_dim=64

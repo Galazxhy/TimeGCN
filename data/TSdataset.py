@@ -19,6 +19,7 @@ import torch
 import pandas as pd
 import numpy as np
 import cv2 as cv
+import random
 from model import utils
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
@@ -42,6 +43,7 @@ class TSData(Dataset):
         super(TSData, self).__init__()
         self.mode = mode
         self.data_root = data_root
+        self.seq_length = seq_length
 
         if data_root.split('/')[-1] == 'UEA':
             self.in_memory = True
@@ -73,15 +75,31 @@ class TSData(Dataset):
             # Preprocessing floatation dataset
             self.in_memory = False
             seq_idxs = os.listdir(data_root + '/imgs')
-            labels = []
+            #labels = []
+            #for seq_idx in seq_idxs:
+                #labels.append(pd.read_csv(data_root + '/labels/' + seq_idx + '.csv'))
+            #train_num = int(len(seq_idxs) * 0.8)
+            #self.train_data = seq_idxs[:train_num]
+            #self.train_label = labels[:train_num]
+            #self.test_data = seq_idxs[train_num:]
+            #self.test_label = labels[train_num:]
+            self.imgs = None
+            self.labels = None
             for seq_idx in seq_idxs:
-                labels.append(pd.read_csv(data_root + '/labels/' + seq_idx + '.csv'))
-            train_num = int(len(seq_idxs) * 0.8)
-            self.train_data = seq_idxs[:train_num]
-            self.train_label = labels[:train_num]
-            self.test_data = seq_idxs[train_num:]
-            self.test_label = labels[train_num:]
-    
+                img = cv.imread(self.data_root+'/imgs/'+seq_idx+'/30.jpg')
+                img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+                img = cv.resize(img, (128, 128))
+                img = img / 255.0
+                self.imgs = utils.np_append(self.imgs, img)
+                label_df = pd.read_csv(data_root+'/labels/'+seq_idx+'.csv')
+                self.labels = utils.np_append(self.labels, np.array(label_df['label'][60]))
+
+            self.labels = (self.labels - np.min(self.labels)) / (np.max(self.labels) - np.min(self.labels))
+            rand_idx = np.random.choice(600, 600, False)
+            self.train_data = rand_idx[:500]
+            self.test_data = rand_idx[500:]
+            self.mask = (np.random.rand(self.imgs.shape[0])>0.6)
+
     def __len__(self):
         """Get length
         """
@@ -101,43 +119,57 @@ class TSData(Dataset):
         """
         if self.in_memory:
             if self.mode == 'train':
-                return self.train_data[index], -1, self.train_label[index]
+                return self.train_data[index], -1, -1, self.train_label[index]
             elif self.mode == 'test':
-                return self.test_data[index], -1, self.test_label[index]
+                return self.test_data[index], -1, -1, self.test_label[index]
         else:
             if self.mode == 'train':
-                seq = self.train_data[index]
-                label_csv = self.train_label[index]
-                imgs = None
-                labels = None
-                items = os.listdir(self.data_root + '/imgs/' + seq)
-                items.sort(key = lambda x:int(x[:-4]))
-                for item in items:
-                    img = cv.imread(self.data_root+'/imgs/'+seq+'/'+item)
-                    img = cv.resize(img, (128, 128))
-                    img = img / 255.0
-                    imgs = utils.np_append(imgs, img)
-                    labels = utils.np_append(labels, np.array(label_csv['label'][int(item.split('.')[0])]))
-                labels_mask = np.array(labels != -1)
-                ySL =torch.stack((torch.tensor(labels, dtype=torch.float), torch.tensor(labels_mask, dtype=torch.bool)))
-                return torch.tensor(imgs, dtype=torch.float).permute(0, 3, 1, 2), ySL, -1
+                seq_start = self.train_data[index]
+                seq = self.imgs[seq_start:seq_start+self.seq_length]
+                seq_label = self.labels[seq_start:seq_start+self.seq_length]
+                seq_mask = self.mask[seq_start:seq_start+self.seq_length]
+
+                #seq = self.train_data[index]
+                #label_csv = self.train_label[index]
+                #img = cv.imread(self.data_root+'/imgs/30.jpg')
+                #label = 
+                #imgs = None
+                #labels = None
+                #items = os.listdir(self.data_root + '/imgs/' + seq)
+                #items.sort(key = lambda x:int(x[:-4]))
+                #for item in items:
+                    #img = cv.imread(self.data_root+'/imgs/'+seq+'/'+item)
+                    #img = cv.resize(img, (128, 128))
+                    #img = img / 255.0
+                    #imgs = utils.np_append(imgs, img)
+                    #labels = utils.np_append(labels, np.array(label_csv['label'][int(item.split('.')[0])]))
+                #labels_mask = np.array(labels != -1)
+                #labels_mask = torch.tensor(labels_mask, dtype=torch.bool)
+                #ySL = torch.tensor(labels, dtype=torch.float)
+                return torch.tensor(seq, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(seq_label, dtype=torch.float), torch.tensor(seq_mask), -1
 
             elif self.mode == 'test':
-                seq = self.test_data[index]
-                label_csv = self.test_label[index]
-                imgs = None
-                labels = None
-                items = os.listdir(self.data_root + '/imgs/' + seq)
-                items.sort(key = lambda x:int(x[:-4]))
-                for item in items:
-                    img = cv.imread(self.data_root+'/imgs/'+seq+'/'+item)
-                    img = cv.resize(img, (128, 128))
-                    img = img / 255.0
-                    imgs = utils.np_append(imgs, img)
-                    labels = utils.np_append(labels, np.array(label_csv['label'][int(item.split('.')[0])]))
-                labels_mask = np.array(labels != -1)
-                ySL = np.stack((labels, labels_mask))
-                return torch.tensor(imgs, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(ySL, dtype=torch.float), -1
+                seq_start = self.train_data[index]
+                seq = self.imgs[seq_start:seq_start+self.seq_length]
+                seq_label = self.labels[seq_start:seq_start+self.seq_length]
+                seq_mask = self.mask[seq_start:seq_start+self.seq_length]
+
+                # seq = self.test_data[index]
+                # label_csv = self.test_label[index]
+                # imgs = None
+                # labels = None
+                # items = os.listdir(self.data_root + '/imgs/' + seq)
+                # items.sort(key = lambda x:int(x[:-4]))
+                # for item in items:
+                #     img = cv.imread(self.data_root+'/imgs/'+seq+'/'+item)
+                #     img = cv.resize(img, (128, 128))
+                #     img = img / 255.0
+                #     imgs = utils.np_append(imgs, img)
+                #     labels = utils.np_append(labels, np.array(label_csv['label'][int(item.split('.')[0])]))
+                # labels_mask = np.array(labels != -1)
+                # labels_mask = torch.tensor(labels_mask, dtype=torch.bool)
+                # ySL =torch.tensor(labels, dtype=torch.float)
+                return torch.tensor(seq, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(seq_label, dtype=torch.float), torch.tensor(seq_mask), -1
 
 
 class GetData():
