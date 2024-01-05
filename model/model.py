@@ -86,9 +86,9 @@ class DSSLTS():
         edge_attr = None
         for i in range(TSdata.shape[0]):
             edge_attr = utils.ts_append(edge_attr, self.SSLnet.inference(TSdata[i], edge))
-        # input = self.SSLnet.embedding(TSdata)
+        input = self.SSLnet.embedding(TSdata).reshape(TSdata.shape[0], TSdata.shape[1], -1)
         
-        output = self.predNet(TSdata, self.time_adj.to(TSdata.device), edge, edge_attr)
+        output = self.predNet(input, self.time_adj.to(TSdata.device), edge, edge_attr)
 
         return output
     

@@ -101,6 +101,7 @@ def perdictorLearning(model, opt, TSdataloader, valid_dataloader, args, writer):
                     loss = F.mse_loss(output, y)
                 loss.backward(retain_graph=True)
                 opt.step()
+                
                 total_loss += loss.item()
             else:
                 # Classification task
@@ -115,9 +116,14 @@ def perdictorLearning(model, opt, TSdataloader, valid_dataloader, args, writer):
                 total_loss += loss.item()
         
         total_loss = total_loss / len(TSdataloader)
-        writer.add_scalar('Pred Loss', total_loss, i)
-        acc = valid.valid(model, valid_dataloader, args)
-        writer.add_scalar('Accuracy', acc, i)
+        writer.add_scalar('Traning MSE Loss', total_loss, i)
+        acc, mae, rmse, r2_score = valid.valid(model, valid_dataloader, args)
+        if args.forec:
+            writer.add_scalar('Test MAE', mae, i)
+            writer.add_scalar('Test RMSE', rmse, i)
+            writer.add_scalar('Test R2 Score', r2_score, i)
+        else:
+            writer.add_scalar('Accuracy', acc, i)
         tbar.set_postfix(Preloss='{:.5f}'.format(total_loss))
         tbar.update()
 

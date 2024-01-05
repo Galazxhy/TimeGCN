@@ -8,7 +8,7 @@ forec=1
 data='./data/Floatation'
 model='DSSL'
 device='cuda'
-batch_size=16
+batch_size=4
 seq_length=60
 
 # Structure learning parameters
@@ -18,15 +18,15 @@ SLlatent_dim=64
 SLif_img=1
 
 # Predictor parameter
-PRElr=1e-5
+PRElr=1e-3
 class_dim=1
 
 # Time-series gragh predictor learning parameters
-TGPhidden_dim=32
-TGPepoch=500
-TGPbeta=1e-3
-TGPtau=8
-TGPfc=0.01
+TGPhidden_dim=256
+TGPepoch=400
+TGPbeta=1e-4
+TGPtau=20
+TGPfc=0.2
 
 # LSTM predictor learning parameters
 LSTMhidden_dim=64

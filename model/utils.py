@@ -18,6 +18,9 @@ import os
 import numpy as np
 import torch
 
+norm_mean = 0
+norm_std = 0
+
 def print_log(i, args, results):
     """Print Training Config and Results
     ---
@@ -61,3 +64,20 @@ def ts_append(a, b):
         return b.unsqueeze(0)
     else:
         return torch.cat([a, b.unsqueeze(0)], dim=0)
+
+def lb_normalize(labels):
+    """ Normalize Labels
+    """
+    global norm_mean
+    norm_mean = np.mean(labels)
+    global norm_std
+    norm_std = np.std(labels)
+
+    normed_labels = (labels - norm_mean) / norm_std
+    return normed_labels
+
+def lb_denormalize(labels):
+    """ Denormalize Labels
+    """
+    denormed_labels = labels*norm_std + norm_mean
+    return denormed_labels

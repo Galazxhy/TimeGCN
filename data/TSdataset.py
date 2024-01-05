@@ -88,17 +88,20 @@ class TSData(Dataset):
             for seq_idx in seq_idxs:
                 img = cv.imread(self.data_root+'/imgs/'+seq_idx+'/30.jpg')
                 img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-                img = cv.resize(img, (128, 128))
+                img = cv.resize(img, (256, 256))
                 img = img / 255.0
                 self.imgs = utils.np_append(self.imgs, img)
                 label_df = pd.read_csv(data_root+'/labels/'+seq_idx+'.csv')
                 self.labels = utils.np_append(self.labels, np.array(label_df['label'][60]))
 
-            self.labels = (self.labels - np.min(self.labels)) / (np.max(self.labels) - np.min(self.labels))
+            #self.labels = (self.labels - np.min(self.labels)) / (np.max(self.labels) - np.min(self.labels))
+            self.labels = utils.lb_normalize(self.labels)
             rand_idx = np.random.choice(600, 600, False)
             self.train_data = rand_idx[:500]
             self.test_data = rand_idx[500:]
-            self.mask = (np.random.rand(self.imgs.shape[0])>0.6)
+            self.mask = (np.random.rand(self.imgs.shape[0])>0.5)
+
+        # elif data_root.split('/')[-1] == 'Floatation_csv':
 
     def __len__(self):
         """Get length
@@ -149,10 +152,12 @@ class TSData(Dataset):
                 return torch.tensor(seq, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(seq_label, dtype=torch.float), torch.tensor(seq_mask), -1
 
             elif self.mode == 'test':
-                seq_start = self.train_data[index]
+                seq_start = self.test_data[index]
                 seq = self.imgs[seq_start:seq_start+self.seq_length]
                 seq_label = self.labels[seq_start:seq_start+self.seq_length]
                 seq_mask = self.mask[seq_start:seq_start+self.seq_length]
+                # seq_mask = np.full((self.seq_length), False)
+                # seq_mask[self.seq_length-1] = True
 
                 # seq = self.test_data[index]
                 # label_csv = self.test_label[index]

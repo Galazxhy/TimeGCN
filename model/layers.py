@@ -72,16 +72,16 @@ class SSL(nn.Module):
                 nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
                 nn.ReLU(),
                 nn.MaxPool2d(2, 2),
-                Reshape(16 * 16 * 32)
-            ) # [128, 128, 3] -> [16, 16, 32]
+                Reshape(32 * 32 * 32)
+            ) # [256, 256, 3] -> [16, 16, 64]
 
-            self.fc = nn.Linear(16 * 16 * 32, 2 * latent_dim)
+            self.fc = nn.Linear(32 * 32 * 32, 2 * latent_dim)
 
             # Deconvolution decoder for image (Using TransConv) 
             self.decoder = nn.Sequential(
-                nn.Linear(latent_dim, 16 * 16 * 32),
+                nn.Linear(latent_dim, 32 * 32 * 32),
                 nn.ReLU(),
-                Reshape(32, 16, 16),
+                Reshape(32, 32, 32),
                 nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
                 nn.ReLU(),
                 nn.ConvTranspose2d(32, 16, kernel_size=2, stride=2),
@@ -130,8 +130,8 @@ class SSL(nn.Module):
         Return:
             loss: Reconstruction loss
         """
-        x = x.reshape(-1, 3, 128, 128) 
-        hidden = self.encoder(x) # [batch_size, num_nodes, 128]
+        x = x.reshape(-1, 3, 256, 256) 
+        hidden = self.encoder(x) # [batch_size, num_nodes, 256]
         mu = self.fc(hidden)[:,:self.latent_dim] # [batch_size, num_nodes, latent_dim]
         log_std = self.fc(hidden)[:,self.latent_dim:] # [batch_size, num_nodes, latent_dim]
         z = self.sample(mu, log_std) # [batch_size, num_nodes, latent_dim]
@@ -165,6 +165,7 @@ class SSL(nn.Module):
             x: Nodes
             edge_index:full connected edges
         """
+        x = x.reshape(-1, 3, 256, 256) 
         hidden = self.encoder(x) # [batch_size, num_nodes, 128]
         
         return hidden
@@ -217,23 +218,23 @@ class Predictor(nn.Module):
         self.if_img = if_img
         if if_img:
             self.encoder = nn.Sequential(
-                nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(),
-                nn.MaxPool2d(2, 2),
-                nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(),
-                nn.MaxPool2d(2, 2),
-                nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(),
-                nn.MaxPool2d(2, 2),
-                Reshape(16 * 16 * 32),
-                nn.Linear(16 * 16 * 32, 128),
+                # nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
+                # nn.ReLU(),
+                # nn.MaxPool2d(2, 2),
+                # nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
+                # nn.ReLU(),
+                # nn.MaxPool2d(2, 2),
+                # nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
+                # nn.ReLU(),
+                # nn.MaxPool2d(2, 2),
+                # Reshape(32 * 32 * 32),
+                nn.Linear(32 * 32 * 32, 1024),
                 nn.ReLU(),
             ) # [128, 128, 3] -> [16, 16, 32]
-            self.TSconv1 = TGCNConv(128, hidden_dim, tau=tau)
+            self.TSconv1 = TGCNConv(1024, hidden_dim, tau=tau)
             self.TSconv2 = TGCNConv(hidden_dim, class_dim, tau=tau)
 
-            self.GCNconv1 = GCNConv(128, hidden_dim)
+            self.GCNconv1 = GCNConv(1024, hidden_dim)
             self.GCNconv2 = GCNConv(hidden_dim, class_dim)
         else:
             self.TSconv1 = TGCNConv(input_dim, hidden_dim, tau=tau)
@@ -248,7 +249,7 @@ class Predictor(nn.Module):
         self.class_dim = class_dim
         self.beta = beta
 
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(0.1)
     
     def forward(self, TSdata, time_adj, edge, edge_attr):
         """Feed forward:
@@ -268,15 +269,15 @@ class Predictor(nn.Module):
             else:
                 input = TSdata[i]
             # print(TSdata[0].shape, edge[0].shape, edge_t[0].shape, edge_attr.shape)
-            hidden_t = self.TSconv1(input, time_adj) # [batch_size, num_nodes, hidden_dim]
-            hidden_g = self.GCNconv1(input, edge_index=edge, edge_weight=edge_attr[i]) # [batch_size, num_nodes, hidden_dim]
+            hidden_t = self.dropout(self.TSconv1(input, time_adj)) # [batch_size, num_nodes, hidden_dim]
+            hidden_g = self.dropout(self.GCNconv1(input, edge_index=edge, edge_weight=edge_attr[i])) # [batch_size, num_nodes, hidden_dim]
 
             # hidden_tmp =hidden_g
             # hidden_tmp = F.relu(hidden_t + self.beta * hidden_g) # [batch_size, num_nodes, hidden_dim]
             # hidden_tmp = F.relu(self.beta * hidden_g) # [batch_size, num_nodes, hidden_dim]
 
-            hidden_t = self.dropout(self.TSconv2(hidden_t, time_adj)) # [batch_size, num_nodes, class_dim]
-            hidden_g = self.dropout(self.GCNconv2(hidden_g, edge_index=edge, edge_weight=edge_attr[i])) # [batch_size, num_nodes, class_dim]
+            hidden_t = self.TSconv2(hidden_t, time_adj) # [batch_size, num_nodes, class_dim]
+            hidden_g = self.GCNconv2(hidden_g, edge_index=edge, edge_weight=edge_attr[i]) # [batch_size, num_nodes, class_dim]
             
             # hidden = torch.cat((hidden, hidden_g.unsqueeze(0)), dim=0)
             hidden = utils.ts_append(hidden, (hidden_t +  self.beta * hidden_g))

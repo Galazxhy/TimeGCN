@@ -70,8 +70,11 @@ def run(args):
             pre_loss = train.perdictorLearning(net, PREopt, data.getTrainDataloader, data.getTestDataloader, args, writer)
             # valid
             print('--------Validating--------')
-            valid_acc = valid.valid(net, data.getTestDataloader, args)
-            utils.print_log(i, args, {'Reconstruction loss':rec_loss, 'Prediction loss':pre_loss, 'Test Accuracy':valid_acc})
+            valid_acc, mae, rmse, r2_score = valid.valid(net, data.getTestDataloader, args)
+            if args.forec:
+                utils.print_log(i, args, {'Reconstruction loss':rec_loss, 'Prediction loss':pre_loss, 'Test MAE': mae, 'Test RMSE':rmse, 'Test R2':r2_score})
+            else:
+                utils.print_log(i, args, {'Reconstruction loss':rec_loss, 'Prediction loss':pre_loss, 'Test Accuracy':valid_acc})
             
         elif args.model == 'LSTM':
             # LSTM baseline
