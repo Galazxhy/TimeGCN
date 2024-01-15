@@ -10,6 +10,7 @@
 # History:
 #       <author>        <version>       <time>      <desc>
 #       郑徐瀚宇         ver0_1          2023/11/21  None
+#       郑徐瀚宇         ver1_0          2023/01/10  RMSE,MSE,R2
 # ------------------------------------------------------------------
 from model import utils
 import torch
@@ -26,8 +27,6 @@ def valid(model, validDataloader, args):
     Return:
         accuracy:
     """
-    # tbar = tqdm(total=len(validDataloader))
-    # tbar.set_description(f'Validating Model')
     accuracy = 0.0
     mae = 0.0
     rmse = 0.0
@@ -38,7 +37,6 @@ def valid(model, validDataloader, args):
     maskAll = None
     with torch.no_grad():
         for data in validDataloader:
-            # data: (x: [batch_size, seq_length, num_feature], ySL: [batch_size, seq_length, num_class]) y:[batch_size, num_class]
             x, ySL, mask, y = data
             x = x.to(args.device)
             ySL = ySL.to(args.device)
@@ -57,25 +55,15 @@ def valid(model, validDataloader, args):
             if args.model == 'DSSL':
                 mae = mae_fn(torch.masked_select(outAll, maskAll), torch.masked_select(ySLAll, maskAll)).item()
                 rmse = torch.sqrt(F.mean_squared_error(torch.masked_select(ySLAll, maskAll), torch.masked_select(outAll, maskAll))).item()
-                print(torch.masked_select(ySLAll, maskAll), torch.masked_select(outAll, maskAll))
                 r2_score = F.r2_score(torch.masked_select(outAll, maskAll), torch.masked_select(ySLAll, maskAll)).item()
             else:
-                accuracy = mae_fn(outAll, ySLALL)
+                accuracy = mae_fn(outAll, ySLAll)
         else:
             if args.model == 'DSSL':
                 outAll = outAll.argmax(dim=1)
                 accuracy = torch.eq(outAll, yAll).sum(dim=0) / outAll.shape[0]
             else:
-                outAll = outpAll.argmax(dim=1)
+                outAll = outAll.argmax(dim=1)
                 accuracy = torch.eq(outAll, yAll).sum(dim=0) / outAll.shape[0]
-        
-            # tbar.update()
-    
-    # if args.forec:
-    #     print(f'Prediction R2 Score:{accuracy/len(validDataloader)}')
-    # else:
-    #     print(f'Classification Accuracy:{accuracy/len(validDataloader)}')
-    # tbar.close()
 
     return accuracy, mae, rmse, r2_score
-

@@ -14,8 +14,11 @@
 #       <author>        <version>       <time>      <desc>
 #       郑徐瀚宇         ver0_1          2023/11/21  None
 #       郑徐瀚宇         ver0_2          2023/11/24  Parameterize Time-aggragating Matrix
+#       郑徐瀚宇         ver1_0          2023/01/10  Hidden feature as input
+#       郑徐瀚宇         ver1_1          2023/01/12  Save model to file
 # ------------------------------------------------------------------
 
+import os
 import time
 import torch
 import torch.nn as nn
@@ -140,6 +143,17 @@ class DSSLTS():
         self.SSLnet.to(device)
         self.predNet.to(device)
 
+    def save_to_file(self):
+        """Save models to file
+        """
+        i = 0
+        while(os.path.exists('./save/exp'+str(i))):
+            i+=1
+        os.makedirs('./save/exp'+str(i))
+        torch.save(self.SSLnet, './save/exp'+str(i)+'/sslnet.pt')
+        torch.save(self.predNet, './save/exp'+str(i)+'/prednet.pt')
+        torch.save(self.time_adj, './save/exp'+str(i)+'/time_adj.pt')
+
     @property
     def sslParam(self):
         return self.SSLnet.parameters()
@@ -147,6 +161,8 @@ class DSSLTS():
     @property
     def predParam(self):
         return self.predNet.parameters()
+
+
 
 
 class TSLSTM(nn.Module):

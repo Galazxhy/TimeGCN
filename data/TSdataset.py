@@ -11,6 +11,7 @@
 # History:
 #       <author>        <version>       <time>      <desc>
 #       郑徐瀚宇         ver0_1          2023/11/21  None
+#       郑徐瀚宇         ver1_0          2023/01/10  Floatation Dataset
 # ------------------------------------------------------------------
 
 
@@ -74,17 +75,9 @@ class TSData(Dataset):
         elif data_root.split('/')[-1] == 'Floatation':
             # Preprocessing floatation dataset
             self.in_memory = False
-            seq_idxs = os.listdir(data_root + '/imgs')
-            #labels = []
-            #for seq_idx in seq_idxs:
-                #labels.append(pd.read_csv(data_root + '/labels/' + seq_idx + '.csv'))
-            #train_num = int(len(seq_idxs) * 0.8)
-            #self.train_data = seq_idxs[:train_num]
-            #self.train_label = labels[:train_num]
-            #self.test_data = seq_idxs[train_num:]
-            #self.test_label = labels[train_num:]
             self.imgs = None
             self.labels = None
+            seq_idxs = os.listdir(data_root + '/imgs')
             for seq_idx in seq_idxs:
                 img = cv.imread(self.data_root+'/imgs/'+seq_idx+'/30.jpg')
                 img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -94,14 +87,19 @@ class TSData(Dataset):
                 label_df = pd.read_csv(data_root+'/labels/'+seq_idx+'.csv')
                 self.labels = utils.np_append(self.labels, np.array(label_df['label'][60]))
 
-            #self.labels = (self.labels - np.min(self.labels)) / (np.max(self.labels) - np.min(self.labels))
             self.labels = utils.lb_normalize(self.labels)
+            self.allTestData = np.arange(0, 600, 1)
             rand_idx = np.random.choice(600, 600, False)
             self.train_data = rand_idx[:500]
             self.test_data = rand_idx[500:]
-            self.mask = (np.random.rand(self.imgs.shape[0])>0.5)
+            self.mask = (np.random.rand(self.imgs.shape[0])>0.4)
 
-        # elif data_root.split('/')[-1] == 'Floatation_csv':
+        elif data_root.split('/')[-1] == 'electricity':
+            self.in_memory = True
+
+            datas = pd.read_csv(data_root+'/electricity.csv').values()
+            self.features = None
+            self.labels = None   
 
     def __len__(self):
         """Get length
@@ -131,50 +129,24 @@ class TSData(Dataset):
                 seq = self.imgs[seq_start:seq_start+self.seq_length]
                 seq_label = self.labels[seq_start:seq_start+self.seq_length]
                 seq_mask = self.mask[seq_start:seq_start+self.seq_length]
-
-                #seq = self.train_data[index]
-                #label_csv = self.train_label[index]
-                #img = cv.imread(self.data_root+'/imgs/30.jpg')
-                #label = 
-                #imgs = None
-                #labels = None
-                #items = os.listdir(self.data_root + '/imgs/' + seq)
-                #items.sort(key = lambda x:int(x[:-4]))
-                #for item in items:
-                    #img = cv.imread(self.data_root+'/imgs/'+seq+'/'+item)
-                    #img = cv.resize(img, (128, 128))
-                    #img = img / 255.0
-                    #imgs = utils.np_append(imgs, img)
-                    #labels = utils.np_append(labels, np.array(label_csv['label'][int(item.split('.')[0])]))
-                #labels_mask = np.array(labels != -1)
-                #labels_mask = torch.tensor(labels_mask, dtype=torch.bool)
-                #ySL = torch.tensor(labels, dtype=torch.float)
                 return torch.tensor(seq, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(seq_label, dtype=torch.float), torch.tensor(seq_mask), -1
 
             elif self.mode == 'test':
                 seq_start = self.test_data[index]
                 seq = self.imgs[seq_start:seq_start+self.seq_length]
                 seq_label = self.labels[seq_start:seq_start+self.seq_length]
-                seq_mask = self.mask[seq_start:seq_start+self.seq_length]
-                # seq_mask = np.full((self.seq_length), False)
-                # seq_mask[self.seq_length-1] = True
-
-                # seq = self.test_data[index]
-                # label_csv = self.test_label[index]
-                # imgs = None
-                # labels = None
-                # items = os.listdir(self.data_root + '/imgs/' + seq)
-                # items.sort(key = lambda x:int(x[:-4]))
-                # for item in items:
-                #     img = cv.imread(self.data_root+'/imgs/'+seq+'/'+item)
-                #     img = cv.resize(img, (128, 128))
-                #     img = img / 255.0
-                #     imgs = utils.np_append(imgs, img)
-                #     labels = utils.np_append(labels, np.array(label_csv['label'][int(item.split('.')[0])]))
-                # labels_mask = np.array(labels != -1)
-                # labels_mask = torch.tensor(labels_mask, dtype=torch.bool)
-                # ySL =torch.tensor(labels, dtype=torch.float)
+                seq_mask = np.zeros(self.seq_length, dtype=bool)
+                seq_mask[self.seq_length-1] = True
                 return torch.tensor(seq, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(seq_label, dtype=torch.float), torch.tensor(seq_mask), -1
+            
+            elif self.mode == 'seq_test':
+                seq_start = self.allTestData[index]
+                seq = self.imgs[seq_start:seq_start+self.seq_length]
+                seq_label = self.labels[seq_start:seq_start+self.seq_length]
+                seq_mask = np.zeros(self.seq_length, dtype=bool)
+                seq_mask[self.seq_length-1] = False
+                return torch.tensor(seq, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(seq_label, dtype=torch.float), torch.tensor(seq_mask), -1
+
 
 
 class GetData():
@@ -201,6 +173,7 @@ class GetData():
         """
         self.train_dataset = TSData(data_root, seq_length, 'train')
         self.test_dataset = TSData(data_root, seq_length, 'test')
+        self.seq_test_dataset = TSData(data_root, seq_length, 'seq_test')
         
         self.batch_size = batch_size
     
@@ -211,6 +184,10 @@ class GetData():
     @property
     def getTestDataloader(self):
         return DataLoader(self.test_dataset, self.batch_size, shuffle=False, drop_last=True)
+    
+    @property
+    def getAllTestDataloader(self):
+        return DataLoader(self.seq_test_dataset, self.batch_size, shuffle=False)
 
     @property
     def getInputShape(self):

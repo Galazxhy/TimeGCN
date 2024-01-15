@@ -17,16 +17,16 @@ SLlr=1e-4
 SLlatent_dim=64
 SLif_img=1
 
-# Predictor parameter
-PRElr=1e-3
+# Predictor parameter 
+PRElr=5e-4
 class_dim=1
 
 # Time-series gragh predictor learning parameters
-TGPhidden_dim=256
-TGPepoch=400
+TGPhidden_dim=128
+TGPepoch=150
 TGPbeta=1e-4
-TGPtau=20
-TGPfc=0.2
+TGPtau=22
+TGPfc=0.22
 
 # LSTM predictor learning parameters
 LSTMhidden_dim=64

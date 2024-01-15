@@ -13,6 +13,7 @@
 # History:
 #       <author>        <version>       <time>      <desc>
 #       郑徐瀚宇         ver0_1          2023/11/21  None
+#       郑徐瀚宇         ver1_0          2023/01/10  None
 # ------------------------------------------------------------------
 
 
@@ -137,6 +138,7 @@ class SSL(nn.Module):
         z = self.sample(mu, log_std) # [batch_size, num_nodes, latent_dim]
         output = self.decoder(z) # [batch_size, num_nodes, feature_dim]
         return F.mse_loss(output, x) + 0.5 * torch.sum(mu.pow(2) + log_std.exp() - log_std - 1)
+        # return F.mse_loss(output, x)
     
     def inference(self, x, edge_index):
         """Calculate Adjacent Weights
@@ -218,23 +220,13 @@ class Predictor(nn.Module):
         self.if_img = if_img
         if if_img:
             self.encoder = nn.Sequential(
-                # nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
-                # nn.ReLU(),
-                # nn.MaxPool2d(2, 2),
-                # nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-                # nn.ReLU(),
-                # nn.MaxPool2d(2, 2),
-                # nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
-                # nn.ReLU(),
-                # nn.MaxPool2d(2, 2),
-                # Reshape(32 * 32 * 32),
-                nn.Linear(32 * 32 * 32, 1024),
+                nn.Linear(32 * 32 * 32, 512),
                 nn.ReLU(),
             ) # [128, 128, 3] -> [16, 16, 32]
-            self.TSconv1 = TGCNConv(1024, hidden_dim, tau=tau)
+            self.TSconv1 = TGCNConv(512, hidden_dim, tau=tau)
             self.TSconv2 = TGCNConv(hidden_dim, class_dim, tau=tau)
 
-            self.GCNconv1 = GCNConv(1024, hidden_dim)
+            self.GCNconv1 = GCNConv(512, hidden_dim)
             self.GCNconv2 = GCNConv(hidden_dim, class_dim)
         else:
             self.TSconv1 = TGCNConv(input_dim, hidden_dim, tau=tau)
@@ -249,7 +241,7 @@ class Predictor(nn.Module):
         self.class_dim = class_dim
         self.beta = beta
 
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.5)
     
     def forward(self, TSdata, time_adj, edge, edge_attr):
         """Feed forward:
@@ -268,20 +260,13 @@ class Predictor(nn.Module):
                 input = self.encoder(TSdata[i]).squeeze(0)
             else:
                 input = TSdata[i]
-            # print(TSdata[0].shape, edge[0].shape, edge_t[0].shape, edge_attr.shape)
             hidden_t = self.dropout(self.TSconv1(input, time_adj)) # [batch_size, num_nodes, hidden_dim]
             hidden_g = self.dropout(self.GCNconv1(input, edge_index=edge, edge_weight=edge_attr[i])) # [batch_size, num_nodes, hidden_dim]
-
-            # hidden_tmp =hidden_g
-            # hidden_tmp = F.relu(hidden_t + self.beta * hidden_g) # [batch_size, num_nodes, hidden_dim]
-            # hidden_tmp = F.relu(self.beta * hidden_g) # [batch_size, num_nodes, hidden_dim]
 
             hidden_t = self.TSconv2(hidden_t, time_adj) # [batch_size, num_nodes, class_dim]
             hidden_g = self.GCNconv2(hidden_g, edge_index=edge, edge_weight=edge_attr[i]) # [batch_size, num_nodes, class_dim]
             
-            # hidden = torch.cat((hidden, hidden_g.unsqueeze(0)), dim=0)
             hidden = utils.ts_append(hidden, (hidden_t +  self.beta * hidden_g))
-            # hidden = torch.cat((hidden, (self.beta * hidden_g).unsqueeze(0)), dim=0)
 
         if self.if_forec:
             return hidden.squeeze(2) # [batch_size, num_nodes, class_dim]

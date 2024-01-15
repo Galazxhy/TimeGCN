@@ -10,6 +10,7 @@
 # History:
 #       <author>        <version>       <time>      <desc>
 #       郑徐瀚宇         ver0_1          2023/11/21  None
+#       郑徐瀚宇         ver1_0          2023/11/21  None
 # ------------------------------------------------------------------
 
 import os
@@ -68,6 +69,7 @@ def run(args):
                 print('--------Training Classification Task--------')
             rec_loss = train.strcutureLearning(net, SLopt, data.getTrainDataloader, args, writer)
             pre_loss = train.perdictorLearning(net, PREopt, data.getTrainDataloader, data.getTestDataloader, args, writer)
+            net.save_to_file()
             # valid
             print('--------Validating--------')
             valid_acc, mae, rmse, r2_score = valid.valid(net, data.getTestDataloader, args)
@@ -100,9 +102,7 @@ def run(args):
     # Test mode
     elif args.mode == 'test':
         print('--------Testing--------')
-        net = torch.load('./save/xx.pth')
-        valid_acc = valid.valid(net, data.getTestDataloader, args)
-        utils.print_log(args, {'Testing Accuracy': valid_acc})
+        valid.valid_visualize(net)
     else:
         print('Running Mode Error!')
         return 
