@@ -20,12 +20,13 @@
 import time
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 from model import utils
-from torch_geometric.nn import GCNConv
 from torch_geometric.nn import pool
-from torch.distributions import Normal, kl_divergence
 import torchvision.models as models
+from torch.nn import functional as F
+from torch_geometric.nn import GCNConv
+from torch.distributions import Normal, kl_divergence
+
 
 class Reshape(nn.Module):
     """To Use Reshape in nn.Sequential
@@ -198,7 +199,7 @@ class TGCNConv(nn.Module):
     
     
 class Predictor(nn.Module):
-    """Predictor of DSSL
+    """Predictor of TIGCN
     ---
     Methods:
         __init__:
@@ -266,10 +267,9 @@ class Predictor(nn.Module):
             hidden_t = self.TSconv2(hidden_t, time_adj) # [batch_size, num_nodes, class_dim]
             hidden_g = self.GCNconv2(hidden_g, edge_index=edge, edge_weight=edge_attr[i]) # [batch_size, num_nodes, class_dim]
             
-            hidden = utils.ts_append(hidden, (hidden_t +  self.beta * hidden_g))
+            hidden = utils.ts_append(hidden, (0 * hidden_t +  self.beta * hidden_g))
 
         if self.if_forec:
             return hidden.squeeze(2) # [batch_size, num_nodes, class_dim]
         else:   
             return F.softmax(hidden.sum(dim=1, keepdim=False), dim=1) # [batch_size, class_dim]
-

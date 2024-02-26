@@ -6,7 +6,7 @@ source /d/Apps/Anaconda/Anaconda/etc/profile.d/conda.sh
 mode='train'
 forec=1
 data='./data/Floatation'
-model='DSSL'
+model='TIGCN'
 device='cuda'
 batch_size=4
 seq_length=60
@@ -24,9 +24,9 @@ class_dim=1
 # Time-series gragh predictor learning parameters
 TGPhidden_dim=128
 TGPepoch=150
-TGPbeta=1e-4
+TGPbeta=1
 TGPtau=22
-TGPfc=0.22
+TGPfc=0.15
 
 # LSTM predictor learning parameters
 LSTMhidden_dim=64

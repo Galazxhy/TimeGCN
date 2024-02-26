@@ -35,6 +35,7 @@ def valid(model, validDataloader, args):
     ySLAll = None
     outAll = None
     maskAll = None
+    mae_fn = torch.nn.L1Loss()
     with torch.no_grad():
         for data in validDataloader:
             x, ySL, mask, y = data
@@ -42,7 +43,7 @@ def valid(model, validDataloader, args):
             ySL = ySL.to(args.device)
             mask = mask.to(args.device)
             y = y.to(args.device)
-            mae_fn = torch.nn.L1Loss()
+            
             output = model.predictor(x) # [batch_size, seq_length, 1]
             outAll = utils.ts_append(outAll, output)
             maskAll = utils.ts_append(maskAll, mask)
@@ -52,14 +53,16 @@ def valid(model, validDataloader, args):
         ySLAll = utils.lb_denormalize(ySLAll)
         yAll = utils.lb_denormalize(yAll)
         if args.forec:
-            if args.model == 'DSSL':
+            if args.model == 'TIGCN':
                 mae = mae_fn(torch.masked_select(outAll, maskAll), torch.masked_select(ySLAll, maskAll)).item()
                 rmse = torch.sqrt(F.mean_squared_error(torch.masked_select(ySLAll, maskAll), torch.masked_select(outAll, maskAll))).item()
                 r2_score = F.r2_score(torch.masked_select(outAll, maskAll), torch.masked_select(ySLAll, maskAll)).item()
             else:
-                accuracy = mae_fn(outAll, ySLAll)
+                mae = mae_fn(torch.masked_select(outAll, maskAll), torch.masked_select(ySLAll, maskAll)).item()
+                rmse = torch.sqrt(F.mean_squared_error(torch.masked_select(ySLAll, maskAll), torch.masked_select(outAll, maskAll))).item()
+                r2_score = F.r2_score(torch.masked_select(outAll, maskAll), torch.masked_select(ySLAll, maskAll)).item()
         else:
-            if args.model == 'DSSL':
+            if args.model == 'TIGCN':
                 outAll = outAll.argmax(dim=1)
                 accuracy = torch.eq(outAll, yAll).sum(dim=0) / outAll.shape[0]
             else:

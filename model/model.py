@@ -163,10 +163,8 @@ class DSSLTS():
         return self.predNet.parameters()
 
 
-
-
 class TSLSTM(nn.Module):
-    """LSTM for Time-series prediction
+    """LSTM for Time-series forecasting
     ---
     Methods:
         __init__:

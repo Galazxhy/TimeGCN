@@ -46,8 +46,9 @@ class TSData(Dataset):
         self.data_root = data_root
         self.seq_length = seq_length
 
+        # Demo Dataset (Not Using)
         if data_root.split('/')[-1] == 'UEA':
-            self.in_memory = True
+            self.in_memory = True # If load whole dataset to memory
             # Preprocess UEA dataset
             files = os.listdir(data_root)
             train_csv = [file  for file in files if file.split('_')[1].split('.')[0] == 'TRAIN']
@@ -94,6 +95,7 @@ class TSData(Dataset):
             self.test_data = rand_idx[500:]
             self.mask = (np.random.rand(self.imgs.shape[0])>0.4)
 
+        # Baseline Datasets
         elif data_root.split('/')[-1] == 'electricity':
             self.in_memory = True
 
@@ -144,7 +146,7 @@ class TSData(Dataset):
                 seq = self.imgs[seq_start:seq_start+self.seq_length]
                 seq_label = self.labels[seq_start:seq_start+self.seq_length]
                 seq_mask = np.zeros(self.seq_length, dtype=bool)
-                seq_mask[self.seq_length-1] = False
+                seq_mask[self.seq_length-1] = True
                 return torch.tensor(seq, dtype=torch.float).permute(0, 3, 1, 2), torch.tensor(seq_label, dtype=torch.float), torch.tensor(seq_mask), -1
 
 

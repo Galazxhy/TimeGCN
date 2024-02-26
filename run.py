@@ -43,8 +43,8 @@ def run(args):
     # Train mode
     if args.mode == 'train':
         # With DSSTSL
-        if args.model == 'DSSL':
-            # DSSLModule
+        if args.model == 'TIGCN':
+            # TIGCNModule
             net = model.DSSLTS(
                 data.getInputShape[1], 
                 args.SLlatent_dim, 
@@ -69,7 +69,6 @@ def run(args):
                 print('--------Training Classification Task--------')
             rec_loss = train.strcutureLearning(net, SLopt, data.getTrainDataloader, args, writer)
             pre_loss = train.perdictorLearning(net, PREopt, data.getTrainDataloader, data.getTestDataloader, args, writer)
-            net.save_to_file()
             # valid
             print('--------Validating--------')
             valid_acc, mae, rmse, r2_score = valid.valid(net, data.getTestDataloader, args)
@@ -94,12 +93,13 @@ def run(args):
                 print('--------Training Forecasting Task--------')
             else:
                 print('--------Training Classification Task--------')
-            pre_loss = train.perdictorLearning(net, LSTMopt, data.getTrainDataloader, args, writer)
+            pre_loss = train.perdictorLearning(net, LSTMopt, data.getTrainDataloader, data.getTestDataloader, args, writer)
             # valid
             print('--------Validating--------')
             valid_acc = valid.valid(net, data.getTestDataloader, args)
             utils.print_log(i, args, {'Prediction loss':pre_loss, 'Testing Accuracy':valid_acc})
     # Test mode
+    # 不使用，用notebook进行
     elif args.mode == 'test':
         print('--------Testing--------')
         valid.valid_visualize(net)
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     parser.add_argument('mode', type=str, default='train', help='Running code with train mode or not')
     parser.add_argument('--forec', type=int, default=0, help='Choosing forecasting task of classification task')
     parser.add_argument('--data', type=str, default='./data/Floatation', help='Root dir of dataset')
-    parser.add_argument('--model', type=str, default='DSSL', help='Choosing model from: [DSSL, LSTM]')
+    parser.add_argument('--model', type=str, default='TIGCN', help='Choosing model from: [TIGCN, LSTM]')
     parser.add_argument('--device', type=str, default='cuda', help='Calculating device')
     parser.add_argument('--batch_size', type=int, default=64, help='Batch size of structure learning')
     parser.add_argument('--seq_length', type=int, default=-1, help='Length of sampling sequence length when forcasting (-1 for classification)')

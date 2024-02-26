@@ -83,7 +83,7 @@ def perdictorLearning(model, opt, TSdataloader, valid_dataloader, args, writer):
     for i in range(args.TGPepoch):
         tbar.set_description(f'Predictor Learning Epoch {i + 1} / {args.TGPepoch}')
         total_loss = 0.0
-    
+        best_res = -100.0
         for data in TSdataloader:
             # data: (x: [batch_size, num_feature], ySL: [batch_size, 2, seq_length, num_class])
             x, ySL, mask, y  = data
@@ -94,7 +94,7 @@ def perdictorLearning(model, opt, TSdataloader, valid_dataloader, args, writer):
             if args.forec:
                 # Forcasting task
                 opt.zero_grad()
-                if args.model == 'DSSL':
+                if args.model == 'TIGCN':
                     output = model.predictor(x) # [batch_size, seq_length, num_class
                     loss = F.mse_loss(torch.masked_select(output, mask), torch.masked_select(ySL, mask))
                 else:
@@ -107,7 +107,7 @@ def perdictorLearning(model, opt, TSdataloader, valid_dataloader, args, writer):
             else:
                 # Classification task
                 opt.zero_grad()
-                if args.model == 'DSSL':
+                if args.model == 'TIGCN':
                     output = model.predictor(x) # [batch_size, num_class]
                 else:
                     output = model(x) # [batch_size, num_class]
@@ -119,15 +119,19 @@ def perdictorLearning(model, opt, TSdataloader, valid_dataloader, args, writer):
         total_loss = total_loss / len(TSdataloader)
         writer.add_scalar('Traning MSE Loss', total_loss, i)
         acc, mae, rmse, r2_score = valid.valid(model, valid_dataloader, args)
+        if r2_score > best_res:
+            best_model = model
+            best_res = r2_score
         if args.forec:
             writer.add_scalar('Test MAE', mae, i)
             writer.add_scalar('Test RMSE', rmse, i)
             writer.add_scalar('Test R2 Score', r2_score, i)
         else:
             writer.add_scalar('Accuracy', acc, i)
+        
         tbar.set_postfix(Preloss='{:.5f}'.format(total_loss))
         tbar.update()
-
+    best_model.save_to_file()
     tbar.close()
 
     return total_loss
